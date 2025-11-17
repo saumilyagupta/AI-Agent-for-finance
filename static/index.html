@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous AI Agent - Test Interface</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Autonomous AI Agent</h1>
+            <p>Test your goals and watch the agent execute them</p>
+            <div style="margin-top: 20px;">
+                <a href="/static/chat.html" class="chat-link-btn" style="display: inline-block; padding: 15px 30px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; transition: background 0.2s; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                    💬 Try the Chat Interface →
+                </a>
+            </div>
+        </header>
+
+        <main>
+            <section class="goal-input">
+                <h2>Enter Your Goal</h2>
+                <form id="goalForm">
+                    <textarea 
+                        id="goalInput" 
+                        placeholder="Enter your goal here... Example: Research the top 5 AI startups funded in 2024"
+                        rows="4"
+                        required
+                    ></textarea>
+                    
+                    <div class="examples">
+                        <h3>Example Goals:</h3>
+                        <div class="example-buttons">
+                            <button type="button" class="example-btn" data-goal="Research the top 5 AI startups funded in 2024, compare their funding amounts, and create a summary">
+                                Research AI Startups
+                            </button>
+                            <button type="button" class="example-btn" data-goal="Find the weather in Tokyo tomorrow, convert the temperature to Fahrenheit, and suggest 3 outdoor activities">
+                                Weather & Activities
+                            </button>
+                            <button type="button" class="example-btn" data-goal="Calculate the compound annual growth rate of Apple stock over the last 5 years and compare it with Microsoft">
+                                Stock Analysis
+                            </button>
+                            <button type="button" class="example-btn" data-goal="Analyze TSLA stock with technical indicators and predict trend">
+                                Stock Technical Analysis
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">Execute Goal</button>
+                </form>
+            </section>
+
+            <section class="result" id="resultSection" style="display: none;">
+                <h2>Execution Created</h2>
+                <p>Execution ID: <strong id="executionId"></strong></p>
+                <a href="#" id="viewLink" class="view-link">View Execution →</a>
+            </section>
+        </main>
+
+        <nav class="nav-links">
+            <a href="/static/chat.html">💬 Chat Interface</a>
+            <a href="/static/history.html">View History</a>
+            <a href="/static/stats.html">Statistics</a>
+            <a href="/api/v1/docs">API Docs</a>
+            <button id="clearDbBtn" class="clear-db-btn" onclick="clearDatabase()">Clear Database</button>
+        </nav>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Handle form submission
+        document.getElementById('goalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const goal = document.getElementById('goalInput').value;
+            
+            try {
+                const response = await fetch('/api/v1/goals', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ goal }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create execution');
+                }
+
+                const data = await response.json();
+                document.getElementById('executionId').textContent = data.execution_id;
+                document.getElementById('viewLink').href = `/static/execution.html?id=${data.execution_id}`;
+                document.getElementById('resultSection').style.display = 'block';
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Handle example buttons
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('goalInput').value = btn.dataset.goal;
+            });
+        });
+
+        // Clear database function
+        async function clearDatabase() {
+            if (!confirm('Are you sure you want to clear ALL database data? This cannot be undone!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/health/database/clear', {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to clear database');
+                }
+
+                const data = await response.json();
+                alert(`Database cleared successfully!\nDeleted: ${JSON.stringify(data.deleted, null, 2)}`);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
+

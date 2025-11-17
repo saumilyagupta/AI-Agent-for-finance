@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics - Autonomous AI Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Statistics</h1>
+            <a href="/static/index.html" class="back-link">← Back to Home</a>
+        </header>
+
+        <main>
+            <section class="overview-stats" id="overviewStats">
+                <h2>Overview</h2>
+                <p>Loading...</p>
+            </section>
+
+            <section class="tool-stats" id="toolStats">
+                <h2>Tool Usage</h2>
+                <p>Loading...</p>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        async function loadStats() {
+            try {
+                // Load overview stats
+                const overviewResponse = await fetch('/api/v1/stats/overview');
+                const overview = await overviewResponse.json();
+                displayOverview(overview);
+
+                // Load tool stats
+                const toolsResponse = await fetch('/api/v1/stats/tools');
+                const tools = await toolsResponse.json();
+                displayTools(tools);
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        function displayOverview(stats) {
+            document.getElementById('overviewStats').innerHTML = `
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <h3>Total Executions</h3>
+                        <p class="stat-value">${stats.total_executions}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Completed</h3>
+                        <p class="stat-value">${stats.completed}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Failed</h3>
+                        <p class="stat-value">${stats.failed}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Cost</h3>
+                        <p class="stat-value">$${stats.total_cost.toFixed(4)}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Tokens</h3>
+                        <p class="stat-value">${stats.total_tokens.toLocaleString()}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayTools(tools) {
+            if (tools.length === 0) {
+                document.getElementById('toolStats').innerHTML = '<p>No tool statistics available</p>';
+                return;
+            }
+
+            document.getElementById('toolStats').innerHTML = `
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Usage Count</th>
+                            <th>Errors</th>
+                            <th>Success Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tools.map(tool => `
+                            <tr>
+                                <td>${tool.tool_name}</td>
+                                <td>${tool.usage_count}</td>
+                                <td>${tool.error_count}</td>
+                                <td>${(tool.success_rate * 100).toFixed(1)}%</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Load stats on page load
+        loadStats();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plotly Test - Verify Loading</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        #chart {
+            margin-top: 30px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        .info {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Plotly.js Test Page</h1>
+        <p>This page tests if Plotly.js is loading correctly in your browser.</p>
+        
+        <div id="status" class="status">
+            ⏳ Loading Plotly.js...
+        </div>
+        
+        <div class="info">
+            <strong>What this tests:</strong>
+            <ul>
+                <li>✓ Plotly.js CDN accessibility</li>
+                <li>✓ JavaScript loading and execution</li>
+                <li>✓ Chart rendering capability</li>
+                <li>✓ Interactive features (zoom, pan, hover)</li>
+            </ul>
+        </div>
+        
+        <button onclick="testPlotly()" id="testBtn">🔄 Re-test Plotly</button>
+        <button onclick="renderSampleChart()" id="chartBtn" style="display: none;">📈 Render India Population Chart</button>
+        
+        <div id="chart"></div>
+        
+        <div id="instructions" style="margin-top: 30px; display: none;">
+            <h3>✅ Success! Plotly is Working</h3>
+            <p><strong>Next Steps:</strong></p>
+            <ol>
+                <li>Go back to chat interface: <a href="/static/chat.html">Open Chat</a></li>
+                <li>If chat still shows errors, do a <strong>hard refresh</strong>:
+                    <ul>
+                        <li>Windows/Linux: <code>Ctrl + Shift + R</code></li>
+                        <li>Mac: <code>Cmd + Shift + R</code></li>
+                    </ul>
+                </li>
+                <li>Try plotting: "Plot a graph of y = 2x + 10"</li>
+            </ol>
+        </div>
+        
+        <div id="errorHelp" style="margin-top: 30px; display: none;">
+            <h3>❌ Plotly Failed to Load</h3>
+            <p><strong>Troubleshooting Steps:</strong></p>
+            <ol>
+                <li><strong>Clear Browser Cache:</strong>
+                    <ul>
+                        <li>Chrome/Edge: <code>Ctrl + Shift + Delete</code></li>
+                        <li>Firefox: <code>Ctrl + Shift + Delete</code></li>
+                        <li>Safari: Preferences → Privacy → Manage Website Data</li>
+                    </ul>
+                </li>
+                <li><strong>Check Internet Connection:</strong> CDN requires internet access</li>
+                <li><strong>Disable Extensions:</strong> Ad blockers might block CDN</li>
+                <li><strong>Try Different Browser:</strong> Test in Chrome, Firefox, or Edge</li>
+                <li><strong>Check Console:</strong> Press F12 and look for errors</li>
+            </ol>
+        </div>
+    </div>
+    
+    <!-- Load Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+    
+    <script>
+        // Test Plotly loading
+        function testPlotly() {
+            const statusDiv = document.getElementById('status');
+            const chartBtn = document.getElementById('chartBtn');
+            const instructions = document.getElementById('instructions');
+            const errorHelp = document.getElementById('errorHelp');
+            
+            if (typeof Plotly !== 'undefined') {
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = '✅ <strong>SUCCESS!</strong> Plotly.js is loaded and ready.<br>' +
+                                    '<small>Version: ' + Plotly.version + '</small>';
+                chartBtn.style.display = 'inline-block';
+                instructions.style.display = 'block';
+                errorHelp.style.display = 'none';
+                
+                // Auto-render sample chart
+                setTimeout(renderSampleChart, 500);
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = '❌ <strong>ERROR!</strong> Plotly.js failed to load.<br>' +
+                                    '<small>The CDN might be blocked or unavailable.</small>';
+                chartBtn.style.display = 'none';
+                instructions.style.display = 'none';
+                errorHelp.style.display = 'block';
+            }
+        }
+        
+        // Render sample India population chart
+        function renderSampleChart() {
+            if (typeof Plotly === 'undefined') {
+                alert('❌ Plotly is not loaded!');
+                return;
+            }
+            
+            // India population data (1955-2025 in 10-year intervals)
+            const years = [1955, 1965, 1975, 1985, 1995, 2005, 2015, 2025];
+            const population = [
+                387700887,
+                490140146,
+                611309535,
+                772647793,
+                960301044,
+                1154676322,
+                1328024498,
+                1463865525
+            ];
+            
+            const trace = {
+                x: years,
+                y: population,
+                mode: 'lines+markers',
+                name: 'Population',
+                line: {
+                    color: '#2563eb',
+                    width: 3
+                },
+                marker: {
+                    size: 8,
+                    color: '#2563eb'
+                }
+            };
+            
+            const layout = {
+                title: {
+                    text: 'Population of India (1955-2025)',
+                    font: { size: 20 }
+                },
+                xaxis: {
+                    title: 'Year',
+                    showgrid: true
+                },
+                yaxis: {
+                    title: 'Population',
+                    showgrid: true
+                },
+                hovermode: 'closest',
+                plot_bgcolor: '#f9fafb',
+                paper_bgcolor: 'white'
+            };
+            
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false
+            };
+            
+            try {
+                Plotly.newPlot('chart', [trace], layout, config);
+                document.getElementById('chart').style.display = 'block';
+            } catch (e) {
+                alert('❌ Failed to render chart: ' + e.message);
+                console.error(e);
+            }
+        }
+        
+        // Auto-test when page loads
+        window.addEventListener('load', () => {
+            setTimeout(testPlotly, 500);
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+

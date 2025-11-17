@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execution History - Autonomous AI Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📜 Execution History</h1>
+            <a href="/static/index.html" class="back-link">← Back to Home</a>
+        </header>
+
+        <main>
+            <section class="filters">
+                <h2>Filters</h2>
+                <div class="filter-controls">
+                    <input type="text" id="searchInput" placeholder="Search goals...">
+                    <select id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="running">Running</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                    <button onclick="loadHistory()">Apply Filters</button>
+                </div>
+            </section>
+
+            <section class="history-list" id="historyList">
+                <p>Loading...</p>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        async function loadHistory() {
+            const search = document.getElementById('searchInput').value;
+            const status = document.getElementById('statusFilter').value;
+            
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (status) params.append('status', status);
+
+            try {
+                const response = await fetch(`/api/v1/history?${params}`);
+                if (!response.ok) throw new Error('Failed to load history');
+                
+                const data = await response.json();
+                displayHistory(data.executions);
+            } catch (error) {
+                document.getElementById('historyList').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayHistory(executions) {
+            const historyList = document.getElementById('historyList');
+            
+            if (executions.length === 0) {
+                historyList.innerHTML = '<p>No executions found</p>';
+                return;
+            }
+
+            historyList.innerHTML = executions.map(exec => `
+                <div class="history-item">
+                    <h3>${exec.goal.substring(0, 100)}${exec.goal.length > 100 ? '...' : ''}</h3>
+                    <div class="history-meta">
+                        <span class="status status-${exec.status}">${exec.status}</span>
+                        <span>${new Date(exec.created_at).toLocaleString()}</span>
+                        <span>$${exec.cost.toFixed(4)}</span>
+                        <span>${exec.tokens_used.toLocaleString()} tokens</span>
+                    </div>
+                    <a href="/static/execution.html?id=${exec.execution_id}" class="view-link">View Details →</a>
+                </div>
+            `).join('');
+        }
+
+        // Load history on page load
+        loadHistory();
+    </script>
+</body>
+</html>
+

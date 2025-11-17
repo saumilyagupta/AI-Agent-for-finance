@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execution Viewer - Autonomous AI Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Execution Viewer</h1>
+            <a href="/static/index.html" class="back-link">← Back to Home</a>
+        </header>
+
+        <main>
+            <section class="execution-info" id="executionInfo">
+                <h2>Loading...</h2>
+            </section>
+
+            <section class="plan-section" id="planSection" style="display: none;">
+                <h2>Execution Plan</h2>
+                <div id="planContent"></div>
+            </section>
+
+            <section class="tasks-section">
+                <h2>Tasks</h2>
+                <div id="tasksList"></div>
+            </section>
+
+            <section class="logs-section">
+                <h2>Execution Logs</h2>
+                <div id="logsContent" class="logs"></div>
+            </section>
+
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>Final Results</h2>
+                <pre id="resultsContent"></pre>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Get execution ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const executionId = urlParams.get('id');
+
+        if (!executionId) {
+            document.getElementById('executionInfo').innerHTML = '<p>No execution ID provided</p>';
+        } else {
+            // Load execution details
+            loadExecutionDetails(executionId);
+            
+            // Connect WebSocket for real-time updates
+            connectWebSocket(executionId);
+        }
+
+        async function loadExecutionDetails(id) {
+            try {
+                const response = await fetch(`/api/v1/goals/${id}/details`);
+                if (!response.ok) throw new Error('Failed to load execution');
+                
+                const data = await response.json();
+                displayExecutionInfo(data);
+            } catch (error) {
+                document.getElementById('executionInfo').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayExecutionInfo(data) {
+            const exec = data.execution;
+            document.getElementById('executionInfo').innerHTML = `
+                <h2>${exec.goal}</h2>
+                <p><strong>Status:</strong> <span class="status status-${exec.status}">${exec.status}</span></p>
+                <p><strong>Created:</strong> ${new Date(exec.created_at).toLocaleString()}</p>
+                ${exec.completed_at ? `<p><strong>Completed:</strong> ${new Date(exec.completed_at).toLocaleString()}</p>` : ''}
+                <p><strong>Cost:</strong> $${exec.cost.toFixed(4)}</p>
+                <p><strong>Tokens:</strong> ${exec.tokens_used.toLocaleString()}</p>
+            `;
+
+            // Display tasks
+            const tasksList = document.getElementById('tasksList');
+            tasksList.innerHTML = data.tasks.map(task => `
+                <div class="task-card status-${task.status}">
+                    <h3>${task.name}</h3>
+                    <p><strong>Tool:</strong> ${task.tool_name}</p>
+                    <p><strong>Status:</strong> <span class="status status-${task.status}">${task.status}</span></p>
+                    ${task.error_message ? `<p class="error">${task.error_message}</p>` : ''}
+                    ${task.result ? `<details><summary>Result</summary><pre>${JSON.stringify(task.result, null, 2)}</pre></details>` : ''}
+                </div>
+            `).join('');
+
+            // Display plan if available
+            if (data.plan) {
+                document.getElementById('planSection').style.display = 'block';
+                document.getElementById('planContent').innerHTML = `
+                    <p><strong>Total Tasks:</strong> ${data.plan.total_tasks}</p>
+                    <p><strong>Estimated Cost:</strong> $${data.plan.estimated_cost.toFixed(4)}</p>
+                    <p><strong>Estimated Time:</strong> ${data.plan.estimated_time}s</p>
+                `;
+            }
+
+            // Display results if completed
+            if (exec.status === 'completed' && data.execution.final_result) {
+                document.getElementById('resultsSection').style.display = 'block';
+                document.getElementById('resultsContent').textContent = 
+                    JSON.stringify(data.execution.final_result, null, 2);
+            }
+        }
+
+        function connectWebSocket(id) {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/goals/${id}/stream`);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addLog(data);
+                
+                // Update UI based on event type
+                if (data.type === 'execution_completed' || data.type === 'execution_failed') {
+                    // Reload execution details
+                    loadExecutionDetails(id);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addLog({ type: 'error', message: 'WebSocket connection error' });
+            };
+
+            ws.onclose = () => {
+                addLog({ type: 'info', message: 'WebSocket connection closed' });
+            };
+        }
+
+        function addLog(event) {
+            const logsContent = document.getElementById('logsContent');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${event.type}`;
+            
+            // Special handling for model_response events
+            let messageHtml = event.message || event.error || '';
+            if (event.type === 'model_response' && event.data) {
+                messageHtml = `
+                    <div class="model-response">
+                        <strong>Model:</strong> ${event.data.model || 'unknown'}<br>
+                        <strong>Tokens:</strong> ${event.data.tokens_used || 0}<br>
+                        <strong>Cost:</strong> $${(event.data.cost || 0).toFixed(6)}<br>
+                        ${event.data.content_preview ? `<details><summary>Response Preview</summary><pre>${event.data.content_preview}</pre></details>` : ''}
+                    </div>
+                `;
+            } else if (event.data && event.data.result) {
+                // Show result data if available
+                messageHtml += `<br><details><summary>Result</summary><pre>${JSON.stringify(event.data.result, null, 2)}</pre></details>`;
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">${new Date(event.timestamp || new Date()).toLocaleTimeString()}</span>
+                <span class="log-type">${event.type}</span>
+                <span class="log-message">${messageHtml}</span>
+            `;
+            logsContent.appendChild(logEntry);
+            logsContent.scrollTop = logsContent.scrollHeight;
+        }
+    </script>
+</body>
+</html>
+

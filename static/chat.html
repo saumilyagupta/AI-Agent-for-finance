@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Autonomous AI Agent Chat Interface - Powered by MCP Tools">
+    <title>AI Agent Chat - Autonomous Assistant</title>
+    <link rel="stylesheet" href="/static/chat.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>🤖 AI Agent</h1>
+                <button id="newChatBtn" class="new-chat-btn">+ New Chat</button>
+            </div>
+            
+            <div class="chat-history" id="chatHistory">
+                <!-- Chat history items will be populated here -->
+            </div>
+            
+            <div class="sidebar-footer">
+                <a href="/static/stats.html" class="footer-link">📊 Statistics</a>
+                <a href="/api/v1/docs" class="footer-link" target="_blank">📚 API Docs</a>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <!-- Header -->
+            <header class="chat-header">
+                <div class="header-info">
+                    <h2>Autonomous AI Agent</h2>
+                    <span class="status-indicator" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span id="statusText">Ready</span>
+                    </span>
+                </div>
+                <div class="header-actions">
+                    <span id="costDisplay" class="cost-badge">Cost: $0.0000</span>
+                    <button id="stopBtn" class="stop-btn" style="display: none;">Stop</button>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message">
+                    <div class="welcome-icon">🚀</div>
+                    <h2>Welcome to AI Agent Chat!</h2>
+                    <p>I'm an autonomous AI agent powered by MCP tools. I can help you with:</p>
+                    <ul class="capabilities-list">
+                        <li>🔍 Web research and information gathering</li>
+                        <li>🧮 Mathematical calculations and analysis</li>
+                        <li>📊 Stock market data and technical analysis</li>
+                        <li>📁 File operations and data processing</li>
+                        <li>💻 Code execution and automation</li>
+                        <li>📈 Data visualization</li>
+                        <li>🌐 API integration and web interactions</li>
+                    </ul>
+                    <p class="welcome-cta">What would you like me to help you with today?</p>
+                    
+                    <div class="example-prompts">
+                        <button class="example-prompt" data-prompt="Plot a graph of y = 2x + 10">
+                            📈 Plot equation
+                        </button>
+                        <button class="example-prompt" data-prompt="Calculate 156 * 23 and explain the steps">
+                            📝 Simple calculation
+                        </button>
+                        <button class="example-prompt" data-prompt="Get Apple stock data for the last month and analyze the trend">
+                            📊 Stock analysis
+                        </button>
+                        <button class="example-prompt" data-prompt="Read the README.md file and summarize the project">
+                            📁 File operations
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+                        rows="1"
+                    ></textarea>
+                    <button id="sendBtn" class="send-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-footer">
+                    <span class="input-hint">The agent will think step-by-step and use tools as needed</span>
+                </div>
+            </div>
+        </main>
+    </div>
+    <footer class="chat-footer">
+        Made by <a href="https://github.com/saumilyagupta" target="_blank" rel="noopener">Saumilya Gupta</a>
+    </footer>
+
+    <!-- Plotly.js for interactive graphs -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+    
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    
+    <!-- KaTeX for LaTeX/Math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
+    <script src="/static/app.js"></script>
+    <script src="/static/chat.js"></script>
+</body>
+</html>
+
