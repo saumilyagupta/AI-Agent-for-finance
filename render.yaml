@@ -2,7 +2,10 @@ services:
   - type: web
     name: AI-Agent-for-finance
     buildCommand: pip install -r requirements.txt
-
+    startCommand: python run.py
     envVars:
       - key: PYTHON_VERSION
         value: "3.10.14"
+      # Note: For Supabase on Render, use the connection pooler URL (port 6543) instead of direct connection
+      # Example: postgresql://user:pass@db.xxx.supabase.co:6543/postgres?pgbouncer=true
+      # This avoids IPv6 connectivity issues on Render
