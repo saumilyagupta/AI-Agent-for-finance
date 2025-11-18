@@ -1,14 +1,18 @@
 """Simple script to run the FastAPI application."""
 
+import os
 import uvicorn
 from app.utils.config import settings
 
 if __name__ == "__main__":
+    # Get port from environment variable (Render provides this) or default to 8000
+    port = int(os.environ.get("PORT", 8000))
+    
     # Configure uvicorn with proper settings
     config = uvicorn.Config(
         "app.api.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=settings.debug,
         log_level=settings.log_level.lower(),
         access_log=True,
