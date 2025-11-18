@@ -27,7 +27,7 @@ class VisualizerTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="visualizer",
-            description="Generate interactive charts and visualizations with data processing. Supports line, bar, scatter, pie, candlestick, and multi-series charts. Can process/calculate data before plotting. For multi-series: use data={'series': [{'name': 'Series1', 'x': [...], 'y': [...]}, ...]}. Returns HTML or JSON for embedding.",
+            description="Generate interactive charts and visualizations including mathematical functions and equations. Supports line, bar, scatter, pie, candlestick, and multi-series charts. IMPORTANT: To plot mathematical functions (e.g., y = 2^x + 10), first calculate x and y values using numpy: generate x values with np.linspace or np.arange, then compute y values using the equation (e.g., y = 2**x + 10), then pass {'x': x.tolist(), 'y': y.tolist()} as data. For multi-series: use data={'series': [{'name': 'Series1', 'x': [...], 'y': [...]}, ...]}. Returns HTML or JSON for embedding.",
         )
 
     @property
@@ -37,12 +37,12 @@ class VisualizerTool(BaseTool):
             "properties": {
                 "chart_type": {
                     "type": "string",
-                    "description": "Type of chart: 'line', 'bar', 'scatter', 'candlestick', 'pie', 'multi_line', 'multi_bar', 'grouped_bar', 'stacked_bar'",
+                    "description": "Type of chart: 'line' (use for mathematical functions/equations), 'bar', 'scatter', 'candlestick', 'pie', 'multi_line', 'multi_bar', 'grouped_bar', 'stacked_bar'. Use 'line' chart type for plotting mathematical functions like y = 2^x + 10.",
                     "enum": ["line", "bar", "scatter", "candlestick", "pie", "multi_line", "multi_bar", "grouped_bar", "stacked_bar"],
                 },
                 "data": {
                     "type": "object",
-                    "description": "Chart data. For single series: {'x': [...], 'y': [...]}. For multi-series: {'series': [{'name': 'Name1', 'x': [...], 'y': [...]}, ...]}. Can also be list of records.",
+                    "description": "Chart data. For single series: {'x': [...], 'y': [...]}. For multi-series: {'series': [{'name': 'Name1', 'x': [...], 'y': [...]}, ...]}. Can also be list of records. IMPORTANT: For mathematical functions (e.g., y = 2^x + 10), calculate x and y arrays first: use numpy to generate x values (np.linspace(-5, 5, 100) for range -5 to 5), then compute y = 2**x + 10, then pass {'x': x.tolist(), 'y': y.tolist()} as data. Example: For y = 2^x + 10, generate x = np.linspace(-5, 5, 100), calculate y = 2**x + 10, then data = {'x': x.tolist(), 'y': y.tolist()}.",
                 },
                 "title": {
                     "type": "string",
@@ -95,6 +95,7 @@ class VisualizerTool(BaseTool):
         - Single series charts (line, bar, scatter, pie, candlestick)
         - Multi-series charts (multi_line, multi_bar, grouped_bar, stacked_bar)
         - Data processing before visualization (aggregate, transform, calculate_stats)
+        - Mathematical function plotting: Generate x values (e.g., np.linspace(-5, 5, 100)), calculate y values from equation (e.g., y = 2**x + 10), then pass as data={'x': x.tolist(), 'y': y.tolist()} with chart_type='line'
         """
         try:
             # Validate required data parameter

@@ -322,34 +322,93 @@ class ReActAgentDirect:
 
     TOOL_GUIDANCE = {
         "visualizer": (
-            "Always provide 'data' with explicit x/y arrays (e.g. "
-            "{\"x\": [...], \"y\": [...]}). For multi-series charts, use "
-            "{\"series\": [{\"name\": \"Series1\", \"x\": [...], \"y\": [...]}]}. "
-            "Never call this tool without data."
+            "REQUIRED: 'chart_type' (string) and 'data' (object with x/y arrays). "
+            "For single series: data={'x': [...], 'y': [...]}. "
+            "For multi-series: data={'series': [{'name': 'Series1', 'x': [...], 'y': [...]}, ...]}. "
+            "Chart types: 'line' (for functions/equations), 'bar', 'scatter', 'pie', 'candlestick', 'multi_line', 'multi_bar', 'grouped_bar', 'stacked_bar'. "
+            "OPTIONAL: 'title', 'x_label', 'y_label' (strings), 'output_format' ('html' or 'json', default: 'json'). "
+            "CRITICAL for mathematical functions (e.g., 'plot y = 2^x + 10'): "
+            "1) Use code_executor FIRST to calculate x/y values: generate x with np.linspace(start, end, num_points) "
+            "(e.g., x = np.linspace(-5, 5, 100) for range -5 to 5 with 100 points; adjust range based on equation domain), "
+            "compute y from equation (e.g., y = 2**x + 10), convert to lists: x_list = x.tolist(), y_list = y.tolist(). "
+            "2) Call visualizer with chart_type='line', data={'x': x_list, 'y': y_list}, title='y = 2^x + 10', x_label='x', y_label='y'. "
+            "Workflow: code_executor → visualizer. Never call visualizer without pre-calculated data arrays."
         ),
-        "calculator": "Provide the exact mathematical expression in the 'expression' field.",
+        "calculator": (
+            "REQUIRED: Either 'expression' (string) OR 'data' (array of numbers) + 'stat_op' (string). "
+            "For math expressions: provide 'expression' (e.g., '2**3 + 5', 'sqrt(16)', 'sin(pi/2)'). "
+            "For statistics: provide 'data' array and optionally 'stat_op' ('mean', 'median', 'std', 'var', 'min', 'max', 'sum'). "
+            "If 'stat_op' omitted with 'data', returns all statistics. "
+            "OPTIONAL: 'operation' ('evaluate' or 'statistics') - auto-detected if omitted. "
+            "Examples: {'expression': '2**10 + 5'}, {'data': [1,2,3,4,5], 'stat_op': 'mean'}, {'data': [10,20,30]}."
+        ),
         "file_ops": (
-            "Include 'operation' (read/write/list) and the appropriate path keys "
-            "('file_path' or 'directory'). Without these the tool will fail."
+            "REQUIRED: 'operation' ('read' or 'write'), 'file_path' (string), 'file_type' ('csv', 'json', 'pdf', 'text'). "
+            "For 'read': provide operation='read', file_path (relative to project root or file_workspace/), file_type. "
+            "For 'write': provide operation='write', file_path (writes go to file_workspace/), file_type, and 'data' (object/string). "
+            "Read can access files in project root or file_workspace/. Write always saves to file_workspace/ for safety. "
+            "Examples: {'operation': 'read', 'file_path': 'data.csv', 'file_type': 'csv'}, "
+            "{'operation': 'write', 'file_path': 'output.json', 'file_type': 'json', 'data': {'key': 'value'}}."
         ),
         "api_client": (
-            "Specify the full 'url'. For GET requests include query params in the URL. "
-            "For POST provide 'method': 'POST' and a JSON-serialisable 'data' payload."
+            "REQUIRED: 'url' (string, full URL including protocol). "
+            "OPTIONAL: 'method' ('GET' or 'POST', default: 'GET'), 'headers' (object with key-value pairs), "
+            "'data' (object for POST request body), 'parse_html' (boolean, default: false), "
+            "'fallback_to_search' (boolean, default: true), 'search_query' (string for fallback). "
+            "For GET: include query params in URL (e.g., 'https://api.example.com/data?param=value'). "
+            "For POST: set method='POST' and provide 'data' object (will be JSON-serialized). "
+            "If API fails and fallback_to_search=true, automatically uses web_search. "
+            "Examples: {'url': 'https://api.example.com/data'}, "
+            "{'url': 'https://api.example.com/submit', 'method': 'POST', 'data': {'key': 'value'}}."
         ),
         "code_executor": (
-            "Supply the Python code string in the 'code' field. Provide any required "
-            "variables inside the code itself."
+            "REQUIRED: 'code' (string containing Python code). "
+            "OPTIONAL: 'timeout' (integer seconds, default: 10). "
+            "Executes Python code safely with restricted imports. Available: numpy, pandas, sympy, math, json, datetime, etc. "
+            "Use this to calculate values before plotting (generate x/y arrays for visualizer), process data, or run computations. "
+            "Code runs in isolated workspace (code_exec_workspace/). Returns stdout, stderr, and return value. "
+            "For plotting functions: generate x with np.linspace(), compute y, convert to lists with .tolist(). "
+            "Example: {'code': 'import numpy as np\\nx = np.linspace(-5, 5, 100)\\ny = 2**x + 10\\nprint({\"x\": x.tolist(), \"y\": y.tolist()})'}."
         ),
         "stock_market": (
-            "Always include 'symbol' (ticker). Optional fields: 'interval', 'range'."
+            "REQUIRED: 'symbol' (string, ticker symbol like 'AAPL', 'MSFT', 'RELIANCE.NS' for NSE, 'RELIANCE.BO' for BSE). "
+            "OPTIONAL: 'period' ('1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max', default: '1y'), "
+            "'interval' ('1m', '5m', '15m', '1h', '1d', '1wk', '1mo', default: '1d'), "
+            "'data_type' ('history', 'info', 'financials', 'dividends', 'splits', 'all', default: 'history'). "
+            "Returns OHLCV data, company info, financials, dividends, or splits based on data_type. "
+            "Examples: {'symbol': 'AAPL'}, {'symbol': 'RELIANCE.NS', 'period': '6mo', 'interval': '1d'}."
         ),
         "stock_calculator": (
-            "Include 'symbol' and 'start_date'/'end_date' or a prepared price series."
+            "REQUIRED: 'data' (object with OHLCV data: {'Date': [...], 'Open': [...], 'High': [...], 'Low': [...], 'Close': [...], 'Volume': [...]} or list of records). "
+            "OPTIONAL: 'features' (array of strings: 'price', 'volume', 'momentum', 'volatility', 'statistical', 'all', default: ['all']). "
+            "Calculates 30-40 technical indicators (RSI, MACD, Bollinger Bands, EMA, etc.). "
+            "Input data typically comes from stock_market tool. Returns DataFrame with all computed features. "
+            "Example: {'data': stock_data_from_stock_market, 'features': ['all']} or {'data': stock_data, 'features': ['momentum', 'volatility']}."
         ),
-        "web_search": "Pass a clear 'query' string. Optionally add 'max_results'.",
+        "stock_analysis": (
+            "REQUIRED: 'symbol' (string, ticker symbol like 'AAPL', 'TSLA', 'RELIANCE.NS'). "
+            "OPTIONAL: 'period' ('1mo', '3mo', '6mo', '1y', '2y', default: '3mo'), "
+            "'include_prediction' (boolean, default: true for trend prediction). "
+            "Performs comprehensive stock analysis: fetches data, calculates technical indicators (RSI, MACD, Bollinger Bands, etc.), "
+            "and optionally predicts trend direction. Returns analysis summary with indicators, trend prediction, and insights. "
+            "Example: {'symbol': 'AAPL', 'period': '6mo', 'include_prediction': true}."
+        ),
+        "web_search": (
+            "REQUIRED: 'query' (string, search query). "
+            "OPTIONAL: 'max_results' (integer, default: 5), 'search_depth' ('basic' or 'advanced', default: 'basic'), "
+            "'include_domains' (array of strings), 'exclude_domains' (array of strings), "
+            "'include_answer' (boolean, default: true for AI-generated summary). "
+            "Uses Tavily API for AI-optimized search. Returns ranked results with titles, snippets, URLs, relevance scores, and optional AI answer. "
+            "Use for current events, real-time data, specific facts. "
+            "Examples: {'query': 'latest AI developments 2024'}, {'query': 'Python best practices', 'max_results': 10, 'search_depth': 'advanced'}."
+        ),
         "weather": (
-            "Include either 'city' or the 'lat'/'lon' coordinates. "
-            "For OpenWeather fallback ensure the API key exists."
+            "REQUIRED: 'city' (string, city name like 'London', 'New York', 'Kanpur'). "
+            "OPTIONAL: 'country' (string, country code like 'US', 'GB', 'IN'), "
+            "'units' ('celsius', 'fahrenheit', 'kelvin', default: 'celsius'). "
+            "Returns current weather: temperature, conditions, humidity, wind speed, pressure, visibility. "
+            "Uses OpenWeatherMap API if configured, otherwise falls back to web scraping. "
+            "Examples: {'city': 'London'}, {'city': 'New York', 'country': 'US', 'units': 'fahrenheit'}."
         ),
     }
 
@@ -388,8 +447,8 @@ Decision Making:
    ✓ Web search: For current events, real-time data, specific facts you don't know
    ✓ Calculator: For complex mathematical calculations
    ✓ File operations: When user asks to read/write files
-   ✓ Code execution: When user asks to run code
-   ✓ Visualizer: When user explicitly asks for charts/graphs
+   ✓ Code execution: When user asks to run code OR when you need to calculate values for plotting (e.g., generate x/y arrays for mathematical functions)
+   ✓ Visualizer: When user explicitly asks for charts/graphs/plots. For mathematical functions, FIRST calculate x/y values using code_executor, THEN plot with visualizer
    
 4. **When NOT to use tools**:
    ✗ Simple greetings ("hi", "hello", "how are you")
