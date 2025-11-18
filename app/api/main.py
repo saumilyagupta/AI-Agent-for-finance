@@ -16,18 +16,23 @@ from app.utils.logger import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan events for startup and shutdown."""
-    # Startup
+    # Startup - Non-blocking initialization for Render compatibility
+    # Render requires the server to start listening immediately
     logger.info("Starting Autonomous AI Agent System...")
+    
+    # Initialize database (non-blocking - won't prevent server from starting)
+    # Database will fall back to SQLite if connection fails
     try:
         init_db()
         logger.info("Database initialized")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
-        raise  # Re-raise to prevent app from starting with broken DB
+        logger.warning(f"Database initialization had issues (will use fallback): {e}")
+        # Don't raise - allow server to start even if DB init has issues
+        # This ensures Render can detect the port immediately
     
     # Tools are now accessed directly from registry (no MCP servers needed)
     logger.info("Tools ready from registry (direct access, no MCP overhead)")
-    logger.info("Application startup complete ✓")
+    logger.info("Application startup complete ✓ - Server is ready to accept connections")
 
     try:
         yield

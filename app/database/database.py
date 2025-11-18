@@ -37,9 +37,10 @@ if settings.database_url:
                     "Update DATABASE_URL to use port 6543 and add ?pgbouncer=true"
                 )
             
-            # Build connection args with timeout settings and SSL
+            # Build connection args with shorter timeout for faster startup (Render requirement)
+            # Render needs the server to start listening immediately
             connect_args = {
-                "connect_timeout": 10,
+                "connect_timeout": 3,  # Reduced from 10 to 3 seconds for faster startup
                 "options": "-c statement_timeout=30000",  # 30 second statement timeout
                 "sslmode": "require",  # Require SSL for Supabase
             }
@@ -48,11 +49,8 @@ if settings.database_url:
             # If IPv6 connection fails, the error will be caught and we'll fall back to SQLite
             # The best solution is to use Supabase connection pooler (port 6543) which uses IPv4
             
-            # For psycopg2, we can't directly force IPv4, but we can set connection parameters
-            # The issue is likely network restrictions on Render, so we'll use a longer timeout
-            # and better error handling
-            
-            # Test connection with a short timeout
+            # Test connection with a short timeout (3 seconds max)
+            # This ensures Render can detect the port quickly even if DB connection fails
             test_engine = create_engine(
                 db_url,
                 pool_pre_ping=True,
@@ -60,10 +58,9 @@ if settings.database_url:
                 max_overflow=0,
                 echo=False,
                 connect_args=connect_args,
-                # Use connection pooler for better reliability
                 pool_recycle=3600,  # Recycle connections after 1 hour
             )
-            # Try to connect with a timeout
+            # Try to connect with a short timeout - fail fast for Render compatibility
             with test_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             
