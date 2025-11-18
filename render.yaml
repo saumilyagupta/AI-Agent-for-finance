@@ -1,7 +1,7 @@
 services:
   - type: web
-    name: AI-Agent-for-finance-
+    name: AI-Agent-for-finance
     buildCommand: pip install -r requirements.txt
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.14
+        value: "3.10.14"
