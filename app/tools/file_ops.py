@@ -17,9 +17,10 @@ class FileOpsTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="file_ops",
-            description="Read and write files. Supports CSV, JSON, and PDF formats. Files are read/written relative to a safe working directory.",
+            description="Read and write files. Supports CSV, JSON, PDF, and plain text formats. Reading can target any file inside the project root; writes stay confined to file_workspace/ for safety.",
         )
-        self.work_dir = Path("./file_workspace")
+        self.project_root = Path(".").resolve()
+        self.work_dir = (self.project_root / "file_workspace").resolve()
         self.work_dir.mkdir(exist_ok=True)
 
     @property
@@ -38,8 +39,8 @@ class FileOpsTool(BaseTool):
                 },
                 "file_type": {
                     "type": "string",
-                    "description": "File type: 'csv', 'json', or 'pdf'",
-                    "enum": ["csv", "json", "pdf"],
+                    "description": "File type: 'csv', 'json', 'pdf', or 'text'",
+                    "enum": ["csv", "json", "pdf", "text"],
                 },
                 "data": {
                     "type": "object",
@@ -62,9 +63,30 @@ class FileOpsTool(BaseTool):
             # Handle case where data might be passed via kwargs
             if data is None and 'data' in kwargs:
                 data = kwargs['data']
-            # Sanitize file path
-            safe_path = Path(file_path).name  # Only filename, no directory traversal
-            full_path = self.work_dir / safe_path
+            # Resolve file path safely
+            requested_path = Path(file_path)
+            if operation == "write":
+                # Writes stay confined to file_workspace
+                full_path = (self.work_dir / requested_path.name).resolve()
+            else:
+                if requested_path.is_absolute():
+                    full_path = requested_path.resolve()
+                else:
+                    full_path = (self.project_root / requested_path).resolve()
+
+                # Fallback to file_workspace if file is located there
+                if not full_path.exists():
+                    workspace_candidate = (self.work_dir / requested_path.name).resolve()
+                    if workspace_candidate.exists():
+                        full_path = workspace_candidate
+
+            # Enforce that resolved path stays under project root or workspace
+            if not str(full_path).startswith(str(self.project_root)):
+                return {
+                    "success": False,
+                    "error": "Access denied: file path escapes project workspace",
+                    "result": None,
+                }
 
             if operation == "read":
                 if not full_path.exists():
@@ -110,6 +132,17 @@ class FileOpsTool(BaseTool):
                         },
                     }
 
+                elif file_type == "text":
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    return {
+                        "success": True,
+                        "result": {
+                            "file_path": file_path,
+                            "text": content,
+                        },
+                    }
+
             elif operation == "write":
                 if not data:
                     return {
@@ -135,6 +168,20 @@ class FileOpsTool(BaseTool):
                 elif file_type == "json":
                     with open(full_path, "w", encoding="utf-8") as f:
                         json.dump(data, f, indent=2)
+                    return {
+                        "success": True,
+                        "result": {
+                            "file_path": file_path,
+                            "message": "File written successfully",
+                        },
+                    }
+
+                elif file_type == "text":
+                    with open(full_path, "w", encoding="utf-8") as f:
+                        if isinstance(data, str):
+                            f.write(data)
+                        else:
+                            json.dump(data, f, indent=2)
                     return {
                         "success": True,
                         "result": {

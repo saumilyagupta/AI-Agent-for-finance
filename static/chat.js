@@ -890,6 +890,8 @@ function renderMathInFinalAnswer(finalDiv) {
     const finalAnswerText = finalDiv.querySelector('.final-answer-text');
     if (!finalAnswerText) return;
     
+    let autoRendered = false;
+    
     if (typeof renderMathInElement !== 'undefined') {
         try {
             // Use auto-render with comprehensive delimiters
@@ -909,12 +911,18 @@ function renderMathInFinalAnswer(finalDiv) {
                 throwOnError: false,
                 strict: false
             });
+            autoRendered = true;
         } catch (e) {
             console.error('KaTeX auto-render error:', e);
             // Fallback to manual rendering
             renderMathManually(finalAnswerText);
         }
     } else if (typeof katex !== 'undefined') {
+        renderMathManually(finalAnswerText);
+    }
+    
+    // Some constructs (like bare [ ... ] blocks) may still need manual handling
+    if (typeof katex !== 'undefined' && autoRendered) {
         renderMathManually(finalAnswerText);
     }
 }
