@@ -609,6 +609,32 @@ class LLMProviderManager:
             raise
 
 
-# Global LLM manager instance
-llm_manager = LLMProviderManager()
+# Lazy singleton instance (initialized on first use, not at module import)
+_llm_manager_instance: Optional[LLMProviderManager] = None
+
+
+def get_llm_manager() -> LLMProviderManager:
+    """Get or create the global LLM manager instance (lazy initialization)."""
+    global _llm_manager_instance
+    if _llm_manager_instance is None:
+        _llm_manager_instance = LLMProviderManager()
+    return _llm_manager_instance
+
+
+# For backward compatibility, create a property that acts like the old global
+# This allows existing code to work without changes
+class _LLMManagerProxy:
+    """Proxy to provide lazy initialization with same interface as before."""
+    
+    def __getattr__(self, name):
+        return getattr(get_llm_manager(), name)
+    
+    async def generate(self, *args, **kwargs):
+        return await get_llm_manager().generate(*args, **kwargs)
+    
+    async def generate_with_tools(self, *args, **kwargs):
+        return await get_llm_manager().generate_with_tools(*args, **kwargs)
+
+
+llm_manager = _LLMManagerProxy()
 
