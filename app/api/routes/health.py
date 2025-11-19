@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.llm_provider import llm_manager
 from sqlalchemy import text
-from app.database.database import engine, get_db_session
+from app.database.database import _get_engine, get_db_session
 from app.database.models import Base, Execution, Task, TaskLog, MemoryEntry
 from app.utils.logger import logger
 
@@ -21,6 +21,7 @@ async def health_check():
 async def database_health():
     """Database connectivity check."""
     try:
+        engine = _get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
