@@ -1,5 +1,6 @@
 """Database connection and session management."""
 
+import os
 from contextlib import contextmanager
 from typing import Generator
 
@@ -37,10 +38,13 @@ if settings.database_url:
                     "Update DATABASE_URL to use port 6543 and add ?pgbouncer=true"
                 )
             
-            # Build connection args with shorter timeout for faster startup (Render requirement)
-            # Render needs the server to start listening immediately
+            # Build connection args with appropriate timeout
+            # Use shorter timeout for Render (faster startup), longer for development
+            is_render = "RENDER" in os.environ or "PORT" in os.environ
+            timeout = 5 if is_render else 10  # 5s on Render, 10s locally
+            
             connect_args = {
-                "connect_timeout": 3,  # Reduced from 10 to 3 seconds for faster startup
+                "connect_timeout": timeout,
                 "options": "-c statement_timeout=30000",  # 30 second statement timeout
                 "sslmode": "require",  # Require SSL for Supabase
             }
@@ -49,32 +53,19 @@ if settings.database_url:
             # If IPv6 connection fails, the error will be caught and we'll fall back to SQLite
             # The best solution is to use Supabase connection pooler (port 6543) which uses IPv4
             
-            # Test connection with a short timeout (3 seconds max)
-            # This ensures Render can detect the port quickly even if DB connection fails
-            test_engine = create_engine(
-                db_url,
-                pool_pre_ping=True,
-                pool_size=1,
-                max_overflow=0,
-                echo=False,
-                connect_args=connect_args,
-                pool_recycle=3600,  # Recycle connections after 1 hour
-            )
-            # Try to connect with a short timeout - fail fast for Render compatibility
-            with test_engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            
-            # If successful, create the main engine
+            # Create engine WITHOUT testing connection at import time
+            # This allows uvicorn to bind to port immediately for Render compatibility
+            # Connection will be validated lazily via pool_pre_ping when first used
             engine = create_engine(
                 db_url,
-                pool_pre_ping=True,
+                pool_pre_ping=True,  # Validates connections before using them
                 pool_size=3,  # Reduced for Render
                 max_overflow=5,  # Reduced for Render
                 echo=settings.debug,
                 connect_args=connect_args,
                 pool_recycle=3600,
             )
-            logger.info("Connected to Supabase database")
+            logger.info("Database engine configured (connection will be established on first use)")
         else:
             # Non-PostgreSQL database (SQLite, etc.)
             engine = create_engine(
@@ -142,18 +133,31 @@ def init_db():
     """Initialize database tables."""
     global engine, SessionLocal
     try:
+        # Test connection first (this is where the actual connection happens)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Database connection established successfully")
+        
+        # Create tables
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables initialized")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
-        # If Supabase connection fails, fall back to SQLite
-        if settings.database_url and "supabase" in settings.database_url.lower():
-            logger.warning("Supabase connection failed, falling back to SQLite")
-            engine = _create_sqlite_engine()
-            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-            Base.metadata.create_all(bind=engine)
-            logger.info("SQLite database initialized as fallback")
+        
+        # Check if Supabase is configured - if so, don't fall back to SQLite
+        if settings.database_url and ("supabase" in settings.database_url.lower() or "postgres" in settings.database_url.lower()):
+            logger.error(
+                "PostgreSQL/Supabase connection failed. Please check:\n"
+                "1. DATABASE_URL is correct in your environment\n"
+                "2. Supabase project is active (not paused)\n"
+                "3. Network allows outbound connections to port 6543\n"
+                "4. Your IP is not blocked by Supabase firewall\n"
+                "5. Try testing connection: psql 'your_database_url'"
+            )
+            # Re-raise the error - don't fall back to SQLite
+            raise Exception(f"Database connection required but failed: {e}")
         else:
+            # If no DATABASE_URL configured, raise error
             raise
 
 
