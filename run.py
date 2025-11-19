@@ -21,11 +21,23 @@ if __name__ == "__main__":
     if is_production:
         print("Running in production mode (Render) - reload disabled", flush=True)
     
-    # Use uvicorn.run() directly for better compatibility with Render
+    # For production (Render): Import app directly for immediate port binding
+    # For development: Use string format to enable reload/watch mode
+    if is_production:
+        # Import app directly to ensure it's loaded before binding
+        # This helps Render's port scanner detect the port immediately
+        from app.api.main import app
+        app_instance = app
+    else:
+        # Use string format for development (enables reload/watch mode)
+        app_instance = "app.api.main:app"
+    
+    # Use uvicorn.run() with appropriate app format
     # According to Render docs: Bind host to 0.0.0.0 and use PORT env var
-    # This ensures the port is properly bound and detected by Render's port scanner
+    # In production: Pass app directly for immediate binding
+    # In development: Pass string for reload capability
     uvicorn.run(
-        "app.api.main:app",
+        app_instance,
         host="0.0.0.0",  # Required by Render - bind to all interfaces
         port=port,  # Use PORT env var (Render sets this)
         reload=reload_enabled,  # Disable reload in production for Render

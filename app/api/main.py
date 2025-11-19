@@ -20,15 +20,24 @@ async def lifespan(app: FastAPI):
     # Render requires the server to start listening immediately
     logger.info("Starting Autonomous AI Agent System...")
     
-    # Initialize database (non-blocking - won't prevent server from starting)
-    # Database will fall back to SQLite if connection fails
-    try:
-        init_db()
-        logger.info("Database initialized")
-    except Exception as e:
-        logger.warning(f"Database initialization had issues (will use fallback): {e}")
-        # Don't raise - allow server to start even if DB init has issues
-        # This ensures Render can detect the port immediately
+    # Defer database initialization to background task for Render compatibility
+    # This ensures the server binds to the port immediately before any blocking operations
+    async def init_db_async():
+        """Initialize database in background after server starts."""
+        try:
+            # Run blocking database init in thread pool to avoid blocking startup
+            import asyncio
+            await asyncio.to_thread(init_db)
+            logger.info("Database initialized")
+        except Exception as e:
+            logger.warning(f"Database initialization had issues (will use fallback): {e}")
+            # Don't raise - allow server to start even if DB init has issues
+            # This ensures Render can detect the port immediately
+    
+    # Start database initialization as background task (non-blocking)
+    # This allows the server to bind to the port immediately
+    import asyncio
+    asyncio.create_task(init_db_async())
     
     # Tools are now accessed directly from registry (no MCP servers needed)
     logger.info("Tools ready from registry (direct access, no MCP overhead)")
